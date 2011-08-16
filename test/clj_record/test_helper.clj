@@ -29,8 +29,6 @@
 (defmulti get-id-key-spec :subprotocol)
 (defmethod get-id-key-spec "derby" [db-spec name]
   [:id :int (str "GENERATED ALWAYS AS IDENTITY CONSTRAINT " name " PRIMARY KEY")])
-(defmethod get-id-key-spec "sqlserver" [db-spec name]
-  [:id :int (str "PRIMARY KEY IDENTITY")])
 (defmethod get-id-key-spec :default [db-spec name]
   [:id "SERIAL UNIQUE PRIMARY KEY"])
 
@@ -47,9 +45,16 @@
         [:price           :int]
         [:manufacturer_id :int "NOT NULL"] ]
     
+    :person
+      [ (get-id-key-spec db "person_pk")
+        [:name             "VARCHAR(32) NOT NULL"]
+        [:mother_id        :int]
+        [:father_person_id :int] ]
+    
     :thing_one
       [ (get-id-key-spec db "thing_one_pk")
-        [:name            "VARCHAR(32)" "NOT NULL"] ]
+        [:name            "VARCHAR(32)" "NOT NULL"]
+        [:owner_person_id   :int] ]
     
     :thing_two
       [ (get-id-key-spec db "thing_two_pk")
@@ -76,15 +81,3 @@
       (drop-tables)
       (create-tables)))
   (println "database reset"))
-
-(defn reset-db-fixture [tables]
-  (fn [test-fn] 
-    (println "Setting up" (db :subprotocol))
-    (sql/with-connection db
-      (sql/transaction
-        (create-tables tables)))
-    (test-fn)
-    (println "Tearing down" (db :subprotocol))
-    (sql/with-connection db
-      (sql/transaction
-        (drop-tables tables)))))
